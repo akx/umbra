@@ -1,0 +1,29 @@
+{
+  "name": "umbra",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "build": "webpack --progress --color -d",
+    "watch": "webpack --progress --color -d --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akx/umbra.git"
+  },
+  "author": "Aarni Koskela <akx@iki.fi>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/akx/umbra/issues"
+  },
+  "homepage": "https://github.com/akx/umbra#readme",
+  "dependencies": {
+    "babel-core": "^5.8.25",
+    "babel-loader": "^5.3.2",
+    "react": "^0.14.0",
+    "react-bootstrap": "^0.27.2",
+    "react-dom": "^0.14.0",
+    "webpack": "^1.12.2"
+  }
+}
