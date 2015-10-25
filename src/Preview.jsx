@@ -1,6 +1,7 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 const WebGLViewport = require("./WebGLViewport");
+const state = require("./state");
 
 export default class Preview extends React.Component {
     componentDidMount() {
@@ -11,7 +12,7 @@ export default class Preview extends React.Component {
     }
     render() {
         return <div id="preview">
-            <WebGLViewport ref="viewport" program={this.props.program} />
+            <WebGLViewport ref="viewport" scene={state.sceneStore.scene} />
         </div>;
     }
 }

@@ -1,17 +1,18 @@
-const defaultVertexShader = `
+const _ = require("lodash");
+const defaultVertexShader = _.trim(`
 attribute vec3 p;
 void main(){gl_Position=vec4(p,1.);}
-`;
+`);
 
-const defaultFragmentShader = `
+const defaultFragmentShader = _.trim(`
 precision mediump float;
 uniform float time;
 uniform vec2 resolution;
 void main(void){
 	vec2 p = (gl_FragCoord.xy * 2.0 - resolution) / min(resolution.x, resolution.y);
-	gl_FragColor = vec4(p.x, p.y, 0, 1.0);
+	gl_FragColor = vec4(abs(p.x), abs(p.y), mod(time, 1.0), 1.0);
 }
-`;
+`);
 
 // h/t https://bocoup.com/weblog/counting-uniforms-in-webgl
 function getProgramInfo(gl, program) {
@@ -73,44 +74,80 @@ function getProgramInfo(gl, program) {
 }
 
 
-export default class Program {
-    constructor(gl) {
-        this.gl = gl;
+export default class Scene {
+    constructor() {
+        this.gl = null;
         this.program = null;
         this.info = null;
         this.uniformMap = {};
         this.attribMap = {};
         this.vertexShader = defaultVertexShader;
         this.fragmentShader = defaultFragmentShader;
+        this.vertexBuffer = null;
+        this.lastInfoLogs = null;
+        this.ok = false;
+        this.lastValid = {};
+        this.resetTime();
+    }
+
+    setWebGLContext(gl) {
+        this.gl = gl;
+        this.link();
+    }
+
+    resetTime() {
+        this.zeroTime = +new Date();
     }
 
     destroy() {
-        if (this.program) {
-            this.gl.deleteProgram(this.program);
+        const gl = this.gl;
+        if (gl && this.vertexBuffer) {
+            gl.deleteBuffer(this.vertexBuffer);
+            this.vertexBuffer = null;
+        }
+        if (gl && this.program) {
+            gl.deleteProgram(this.program);
             this.program = null;
             this.info = null;
         }
     }
 
+    getStatus() {
+        if(this.gl === null || this.program === null) return "invalid";
+        if(this.ok === false) return "failed";
+        return "ok";
+    }
+
     link() {
-        this.destroy();
+        this.ok = false;
         const gl = this.gl;
+        if(gl === null) return;
         const prg = gl.createProgram();
+        const infoLogs = this.lastInfoLogs = {vertexShader: null, fragmentShader: null, link: null};
         const vSource = this.vertexShader.replace(/\r/gi, '');
         const fSource = this.fragmentShader.replace(/\r/gi, '');
-        const vRes = this._compileShader(prg, gl.VERTEX_SHADER, vSource);
-        const fRes = this._compileShader(prg, gl.FRAGMENT_SHADER, fSource);
-        if (vRes || fRes) throw new Error("Pre-link error");
+        infoLogs.vertexShader = this._compileShader(prg, gl.VERTEX_SHADER, vSource);
+        infoLogs.fragmentShader = this._compileShader(prg, gl.FRAGMENT_SHADER, fSource);
+        if(infoLogs.vertexShader || infoLogs.fragmentShader) { // either compile failed
+            this.lastInfoLogs = infoLogs;
+            return false;
+        }
         gl.linkProgram(prg);
         if (!gl.getProgramParameter(prg, gl.LINK_STATUS)) {
-            throw new Error("Link error: " + gl.getProgramInfoLog(prg));
+            infoLogs.link = gl.getProgramInfoLog(prg);
+            this.lastInfoLogs = infoLogs;
+            return false;
         }
+        this.destroy();
         this.program = prg;
         this._refreshInfo();
+        this.lastValid = _.pick(this, ["vertexShader", "fragmentShader", "info"]);
+        this.ok = true;
     }
 
     _refreshInfo() {
         const gl = this.gl;
+        if(gl === null) return;
         const info = this.info = getProgramInfo(gl, this.program);
         const uMap = this.uniformMap = {};
         const aMap = this.attribMap = {};
@@ -120,19 +157,42 @@ export default class Program {
 
     _compileShader(prg, shaderType, source) {
         const gl = this.gl;
+        if(gl === null) throw new Error("no gl context");
         const shader = gl.createShader(gl[shaderType] || shaderType);
         gl.shaderSource(shader, source);
         gl.compileShader(shader);
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            const infoLog = gl.getShaderInfoLog(shader);
-            throw new Error("Compile error: " + infoLog);
+            return gl.getShaderInfoLog(shader);
         }
         gl.attachShader(prg, shader);
         return gl.getShaderInfoLog(shader);
     }
 
-    use() {
+    _recreateVertexBuffer() {
         const gl = this.gl;
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 1, 0, -1, -1, 0, 1, 1, 0, 1, -1, 0]), gl.STATIC_DRAW);
+        this.vertexBuffer = buffer;
+    }
+
+    draw(width, height) {
+        const gl = this.gl;
+        if(gl === null) return;
+        const location = this.attribMap.p;
+        if(location !== undefined) {
+            if(!this.vertexBuffer) this._recreateVertexBuffer();
+            gl.enableVertexAttribArray(location);
+            gl.vertexAttribPointer(location, 3, gl.FLOAT, false, 0, 0);
+        }
+        gl.clearColor(0, 0, 0, 1);
+        gl.viewport(0, 0, width, height);
         gl.useProgram(this.program);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        if (this.uniformMap.time) gl.uniform1f(this.uniformMap.time, (+new Date() - this.zeroTime) * 0.001);
+        if (this.uniformMap.resolution) gl.uniform2fv(this.uniformMap.resolution, [width, height]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.flush();
     }
 }

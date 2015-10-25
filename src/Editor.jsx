@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 const ShaderEditor = require("./ShaderEditor");
 const cx = require("classnames");
+const state = require("./state");
 
 class EditorTabs extends React.Component {
     render() {
@@ -24,9 +25,10 @@ export default class Editor extends React.Component {
         this.state = {activeTab: "shader"};
     }
     render() {
+        const scene = state.sceneStore.scene;
         var editorComp = null;
         if(this.state.activeTab === "shader") {
-            editorComp = <ShaderEditor />;
+            editorComp = <ShaderEditor scene={scene} />;
         }
 
         return <div id="editor">
