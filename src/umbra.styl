@@ -1,0 +1,68 @@
+@font-face
+  font-family 'brandon'
+  src url('./brandon.woff') format('woff')
+  font-weight normal
+  font-style normal
+
+html, body
+  height 100%
+  margin 0
+  overflow hidden
+  font 10pt/1.2 "Helvetica Neue", Helvetica, Arial, sans-serif
+
+#app, #wrapper
+  height 100%
+  display flex
+  flex-direction column
+
+#header
+  background-color #4D4549
+  color white
+  font 13pt brandon
+  text-transform uppercase
+  padding-left 2px
+
+#main-row
+  background-color green
+  flex 2
+  display flex
+
+#editor
+  background-color #e5ebf2
+  flex 0 0 400px
+  display flex
+  flex-direction column
+
+  .main
+    flex 1
+
+  .tabs
+    flex 0 0
+    display flex
+    background #edf3fa
+    border-bottom 1px solid #d2d8de
+    .tab
+      flex 1 1
+    .new-button
+      width 20px
+    > a
+      white-space nowrap
+      padding 4px
+      text-align center
+      font-family brandon
+      text-transform uppercase
+      text-decoration none
+      color #676767
+      border-bottom 2px solid transparent
+      &.active
+        border-bottom-color #D8313D
+      &:hover
+        color #000
+
+  .CodeMirror
+    height auto
+
+
+#preview
+  background-color white
+  flex 1 1
